@@ -1,0 +1,10 @@
+.venv/
+data/
+__pycache__/
+*.pyc
+.DS_Store
+.browser-test/
+build/
+dist/
+tools/native/
+*.egg-info/

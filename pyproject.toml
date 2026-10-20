@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "soundnote"
+version = "2.1.0"
+description = "Local desktop transcription with whisper.cpp"
+requires-python = ">=3.10,<3.14"
+dependencies = ["PySide6>=6.8,<7.0"]
+
+[project.optional-dependencies]
+build = ["pyinstaller>=6.12,<7"]
+
+[project.gui-scripts]
+soundnote = "soundnote.launcher:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
