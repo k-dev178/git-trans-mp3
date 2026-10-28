@@ -40,7 +40,7 @@ DARK = {
 }
 
 STYLE_TEMPLATE = """
-QWidget { font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; font-size: 13px; color: $text; }
+QWidget { font-family: 'Apple SD Gothic Neo'; font-size: 13px; color: $text; }
 QMainWindow, QDialog, QWidget#content { background: $window; }
 QWidget#library { background: $surface; }
 QLabel#caption, QLabel#eyebrow { font-size: 10px; color: $muted; }

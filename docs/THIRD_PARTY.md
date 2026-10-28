@@ -11,9 +11,7 @@ never included by the build script.
 - whisper.cpp: https://github.com/ggml-org/whisper.cpp — MIT License.
 - GGML: https://github.com/ggml-org/ggml — MIT License.
 - FFmpeg: https://ffmpeg.org/ — LGPL/GPL, depending on build configuration.
-  The Windows installer uses Gyan's GPLv3 essentials build:
-  https://www.gyan.dev/ffmpeg/builds/ (includes version, licenses and source links).
 
-The build script preserves native tool license files when supplied by the
-installer or Homebrew. Check the licenses of the exact binaries before
+The build script preserves native tool license files supplied by Homebrew.
+Check the licenses of the exact binaries before
 redistributing them; retain notices and meet applicable source requirements.

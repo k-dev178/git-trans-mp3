@@ -63,18 +63,14 @@ with InstanceLock(sys.argv[1]) as lock:
 
     def test_frozen_data_is_separate_from_application_files(self):
         with patch.object(paths, "FROZEN", True), patch.dict(os.environ, {}, clear=True):
-            with patch.object(sys, "platform", "darwin"):
-                self.assertEqual(paths.data_directory(), Path.home() / "Library/Application Support/Soundnote")
-            with patch.object(sys, "platform", "win32"), patch.dict(os.environ, {"LOCALAPPDATA": str(self.directory)}):
-                self.assertEqual(paths.data_directory(), self.directory / "Soundnote")
+            self.assertEqual(paths.data_directory(), Path.home() / "Library/Application Support/Soundnote")
 
     def test_data_directory_override(self):
         with patch.dict(os.environ, {"SOUNDNOTE_DATA_DIR": str(self.directory)}):
             self.assertEqual(paths.data_directory(), self.directory.resolve())
 
     def test_packaged_engine_is_found_without_path(self):
-        name = "whisper-cli.exe" if os.name == "nt" else "whisper-cli"
-        binary = self.directory / name
+        binary = self.directory / "whisper-cli"
         binary.write_bytes(b"engine")
         with patch("soundnote.whisper_cpp.native_directory", return_value=self.directory), patch.dict(os.environ, {"PATH": ""}):
             self.assertEqual(WhisperEngine.executable("whisper-cli"), str(binary))

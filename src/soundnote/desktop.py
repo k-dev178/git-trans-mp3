@@ -16,7 +16,7 @@ from .instance import InstanceLock
 from .paths import data_directory
 
 if not ensure_qt():
-    raise ImportError("GUI 실행에 PySide6가 필요합니다. 운영체제에 맞는 설치 파일을 실행해 주세요.")
+    raise ImportError("GUI 실행에 PySide6가 필요합니다. README.md의 설치 명령을 실행해 주세요.")
 
 from PySide6.QtCore import QEvent, QSignalBlocker, Qt, QTimer, Signal
 from PySide6.QtGui import QAction, QColor, QFont, QIcon, QKeySequence, QPainter, QPen, QPixmap
@@ -278,7 +278,7 @@ class AddPage(QWidget):
         options_layout = QVBoxLayout(self.options)
         options_layout.setContentsMargins(0, 0, 0, 0)
         options_layout.setSpacing(16)
-        engine_notice = label("전사 엔진 설치가 필요합니다. 운영체제에 맞는 설치 파일을 실행한 뒤 앱을 다시 실행해 주세요.", "notice", True)
+        engine_notice = label("전사 엔진 설치가 필요합니다. README.md의 설치 명령을 실행한 뒤 앱을 다시 실행해 주세요.", "notice", True)
         engine_notice.setVisible(not WhisperEngine.available())
         options_layout.addWidget(engine_notice)
         models = QGroupBox("전사 모델")
@@ -965,7 +965,7 @@ def main():
     application = DesktopApplication(sys.argv[:1])
     application.setApplicationName("소리노트")
     application.setOrganizationName("Soundnote")
-    application.setFont(QFont("Malgun Gothic" if sys.platform == "win32" else "Apple SD Gothic Neo", 13))
+    application.setFont(QFont("Apple SD Gothic Neo", 13))
     application.setStyle("Fusion")
     application.setWindowIcon(app_icon())
     application.setQuitOnLastWindowClosed(False)

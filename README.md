@@ -1,45 +1,89 @@
 # 소리노트
 
-음성 파일을 텍스트로 전사하는 **데스크톱 GUI 프로그램**입니다. Qt 화면과 C++ whisper.cpp 엔진을 사용합니다. macOS와 Windows x64용 설치·실행·배포 스크립트를 제공합니다. Windows 실기기 검증은 별도로 필요합니다.
+음성 파일을 텍스트로 전사하는 **macOS 데스크톱 GUI 프로그램**입니다. Qt 화면과 C++ whisper.cpp 엔진을 사용합니다.
+
+## 설치
+
+소스에서 실행하려면 아래 프로그램이 필요합니다. 명령은 프로젝트 루트에서 실행하세요.
+
+| 프로그램 | 용도 |
+| --- | --- |
+| [Homebrew](https://brew.sh/) | Python과 네이티브 도구 설치 |
+| Python 3.10~3.13 | 앱 실행. 아래 명령은 3.13 기준 |
+| PySide6 | Qt 데스크톱 화면. `requirements.txt`로 설치 |
+| whisper.cpp | C++ 음성 인식 엔진 (`whisper-cli`) |
+| FFmpeg | 입력 파일을 전사용 WAV로 변환 |
+
+Homebrew가 없다면 [공식 설치 명령](https://brew.sh/)을 실행하고, 완료 후 표시되는 PATH 설정 안내를 따르세요.
+
+```sh
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+필수 도구와 Python 패키지를 설치합니다.
+
+```sh
+brew install python@3.13 whisper.cpp ffmpeg
+python3.13 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+```
+
+설치와 첫 모델 다운로드에는 인터넷 연결이 필요합니다. 전사 모델은 앱에서 처음 사용할 때 자동 다운로드되며, API 키는 필요하지 않습니다.
 
 ## 실행
 
-| 운영체제 | 처음 설치 | 실행 | 배포 파일 생성 |
-| --- | --- | --- | --- |
-| macOS | `맥설치.command` | `맥실행.command` | `맥dist추출.command` |
-| Windows x64 | `윈도우설치.bat` | `윈도우실행.bat` | `윈도우dist추출.bat` |
+```sh
+PYTHONPATH=src .venv/bin/python -m soundnote
+```
 
-1. Python 3.10~3.13과 인터넷 연결이 필요합니다. 맥은 [Homebrew](https://brew.sh), 윈도우는 **64비트 Python**을 준비하세요. 윈도우 Python 설치 시 Python Launcher도 설치하세요.
-2. 운영체제에 맞는 **설치** 파일을 실행한 뒤 **실행** 파일을 더블클릭합니다. 설치 파일은 GUI(PySide6), whisper.cpp, FFmpeg를 준비합니다. Windows 네이티브 도구는 프로젝트의 `tools/native/`에 저장되며 PATH에 설치된 도구도 사용할 수 있습니다.
-3. 첫 화면에는 전사 리스트와 **+** 버튼만 표시됩니다. **+**를 누르면 파일 드롭 영역만 표시됩니다. **Esc**로 목록에 돌아갈 수 있습니다.
-4. MP3·M4A 등 파일을 끌어다 놓거나 파일 선택 창에서 고릅니다. 유효한 파일을 고르면 모델·언어·세부 설정과 **확인 · 전사 시작** 버튼이 나타납니다.
-5. 모델과 언어를 고르고 확인을 누르면 백그라운드 전사가 시작됩니다. **홈으로 돌아가기**를 누르면 목록에서 회전 로딩 표시와 진행률을 확인할 수 있습니다.
-6. 완료된 기록을 클릭하면 전사 내용을 확인하고 복사하거나 TXT·SRT로 저장할 수 있습니다. 실패한 작업은 같은 화면에서 다시 시작할 수 있습니다.
+앱은 터미널과 독립적으로 실행됩니다. 터미널에서 로그를 보며 실행하려면 `--foreground`를 붙입니다.
 
-독립 배포본은 맥에서 `dist/macos/Soundnote.app`, 윈도우에서 `dist/windows/Soundnote/Soundnote.exe`로 생성됩니다. 빌드는 **해당 운영체제에서** 실행해야 합니다. 폴더 전체 또는 ZIP을 배포하세요. 자세한 내용은 [배포 안내](docs/build.md)를 참고하세요.
+```sh
+PYTHONPATH=src .venv/bin/python -m soundnote --foreground
+```
+
+1. 첫 화면의 **+**를 누르고 MP3·M4A 등 파일을 끌어다 놓거나 선택합니다. **Esc**로 목록에 돌아갈 수 있습니다.
+2. 모델·언어·세부 설정을 고르고 **확인 · 전사 시작**을 누릅니다. 목록에서 진행률을 확인할 수 있습니다.
+3. 완료된 기록을 클릭해 내용을 확인하고 복사하거나 TXT·SRT로 저장합니다. 실패한 작업은 같은 화면에서 다시 시작할 수 있습니다.
+
+## 배포 파일 생성
+
+설치를 마친 맥에서 빌드용 패키지를 설치한 뒤 빌드합니다.
+
+```sh
+.venv/bin/python -m pip install -r scripts/requirements-build.txt
+.venv/bin/python scripts/build.py
+```
+
+결과는 `dist/macos/Soundnote.app`과 `Soundnote-macos-<아키텍처>.zip`입니다. `.app` 또는 ZIP을 배포하세요. Python·Qt·whisper.cpp·FFmpeg가 포함되므로 배포본 사용자는 별도로 설치할 필요가 없습니다. 개인 `data/`와 전사 모델은 포함하지 않습니다.
+
+빌드 입력만 확인하려면 `.venv/bin/python scripts/build.py --plan`을 실행합니다. 빌드는 현재 Python과 네이티브 도구의 아키텍처를 따릅니다. Apple Silicon과 Intel 배포본은 해당 아키텍처의 맥에서 각각 생성하세요. Apple Developer 서명·공증·DMG 생성은 포함하지 않습니다.
+
+배포 전 다른 사용자 환경에서 앱 실행, 전사, TXT·SRT 저장, 창 재열기와 종료를 확인하세요. 구성요소의 라이선스는 [THIRD_PARTY.md](docs/THIRD_PARTY.md)를 참고하세요.
 
 ## 폴더 구성
 
 ```text
 src/soundnote/     GUI, 테마, 저장소, whisper.cpp 연동 코드
-scripts/          설치·패키징 도구와 운영체제별 보조 스크립트
+scripts/          Python 빌드·테스트 도구
 assets/           앱 아이콘
 tests/            자동 테스트
-docs/             배포 안내, 화면 예시, 기존 참고 파일
+docs/             라이선스 안내, 화면 예시, 기존 참고 파일
 data/             기존 녹음 사본·전사 기록·모델 (개발 실행)
-tools/native/     Windows용 whisper.cpp·FFmpeg (설치 시 생성)
 build/, dist/     빌드 중간 파일, 배포 결과 (빌드 시 생성)
 ```
-
-예전 소스 실행용 `.app`은 `scripts/macos/소리노트.app`에 보관했습니다. 루트의 `맥실행.command`를 사용하면 됩니다.
 
 ## 백그라운드 동작
 
 - 앱 창의 닫기 버튼을 누르면 창이 숨겨지고 전사는 계속됩니다.
-- 맥 메뉴 막대 또는 윈도우 알림 영역의 소리노트 아이콘에서 **전사 목록 열기**, **새 전사**, **소리노트 종료**를 선택할 수 있습니다.
-- 앱을 다시 더블클릭하면 실행 중인 앱 창을 다시 엽니다. Dock에서 앱을 활성화해도 숨겨진 창이 다시 열립니다.
-- 완전히 종료하려면 앱 메뉴의 **소리노트 종료**를 사용합니다. 맥은 Cmd+Q 또는 `scripts/macos/종료.command`도 사용할 수 있습니다.
+- 맥 메뉴 막대의 소리노트 아이콘에서 **전사 목록 열기**, **새 전사**, **소리노트 종료**를 선택할 수 있습니다.
+- 실행 명령을 다시 실행하거나 배포본 앱을 더블클릭하면 실행 중인 앱 창을 다시 엽니다. Dock에서 앱을 활성화해도 숨겨진 창이 다시 열립니다.
+- 완전히 종료하려면 앱 메뉴의 **소리노트 종료** 또는 Cmd+Q를 사용합니다. 터미널에서도 종료할 수 있습니다.
 - 컴퓨터가 잠자기 상태이면 처리도 멈춥니다. 종료로 중단된 전사는 다음 실행 시 원본 음성부터 다시 처리됩니다.
+
+```sh
+PYTHONPATH=src .venv/bin/python -m soundnote --stop
+```
 
 ## 화면 모드
 
@@ -69,7 +113,9 @@ build/, dist/     빌드 중간 파일, 배포 결과 (빌드 시 생성)
 
 ## 저장과 진행률
 
-소스 실행은 기존 `data/` 저장 위치와 SQLite 형식을 유지합니다. 독립 배포본은 맥 `~/Library/Application Support/Soundnote/`, 윈도우 `%LOCALAPPDATA%\Soundnote\`를 사용합니다. 아래 경로는 소스 실행 기준입니다.
+소스 실행은 기존 `data/` 저장 위치와 SQLite 형식을 유지합니다. 독립 배포본은 `~/Library/Application Support/Soundnote/`를 사용합니다. 아래 경로는 소스 실행 기준입니다.
+
+`SOUNDNOTE_DATA_DIR` 환경변수 또는 `--data-dir`로 저장 폴더를 지정할 수 있습니다. 기존 기록을 사용하려면 기존 `data/`의 절대 경로를 지정하세요. DB에는 음성 사본의 절대 경로가 저장되므로 폴더만 복사해 다른 위치로 옮기는 방식은 지원하지 않습니다.
 
 - 음성 사본: `data/uploads/`
 - 작업 상태와 결과: `data/transcriptions.sqlite3`
@@ -82,18 +128,10 @@ build/, dist/     빌드 중간 파일, 배포 결과 (빌드 시 생성)
 
 ## 개발 및 테스트
 
-```sh
-brew install whisper.cpp ffmpeg
-python3.13 -m venv .venv
-.venv/bin/python -m pip install -r requirements.txt
-PYTHONPATH=src .venv/bin/python -m soundnote --foreground
-```
-
-터미널과 독립적으로 실행하려면 `--foreground`를 생략합니다. `--stop`으로 종료할 수 있습니다. Windows PowerShell에서는 `$env:PYTHONPATH='src'` 설정 후 `.venv\Scripts\python.exe -m soundnote`를 실행합니다. 패키지 개발 환경은 `pip install -e .`로 설치할 수도 있습니다.
+패키지 개발 환경은 `.venv/bin/python -m pip install -e .`로 설치할 수도 있습니다.
 
 ```sh
 .venv/bin/python scripts/test.py
-# Windows: .venv\Scripts\python.exe scripts/test.py
 ```
 
 GUI 테스트는 실제 Qt 위젯과 이벤트 루프를 사용합니다. 전사 작업 테스트는 제어 가능한 음성 구간 스트림으로 진행률·저장·복구를 검증합니다. C++ 엔진 연동 테스트는 가짜 CLI 프로세스로 옵션 전달, 결과 파싱, 취소와 오류 처리를 검증합니다. 실제 모델의 음성 인식 정확도와 Metal 가속은 별도 실행으로 확인해야 합니다.

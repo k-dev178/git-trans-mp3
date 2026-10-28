@@ -63,9 +63,8 @@ def main():
         return
     from .qt_bootstrap import ensure_qt
     if not ensure_qt():
-        sys.exit("GUI 라이브러리가 필요합니다. 맥설치.command 또는 윈도우설치.bat를 실행하세요.")
-    options = {"creationflags": subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP} if os.name == "nt" else {"start_new_session": True}
+        sys.exit("GUI 라이브러리가 필요합니다. README.md의 설치 명령을 실행하세요.")
     with (directory / "launcher.log").open("ab") as output:
         subprocess.Popen([sys.executable, "-m", "soundnote", "--foreground", "--data-dir", str(directory)],
-                         cwd=ROOT, stdin=subprocess.DEVNULL, stdout=output, stderr=output, **options)
+                         cwd=ROOT, stdin=subprocess.DEVNULL, stdout=output, stderr=output, start_new_session=True)
     print("소리노트 GUI를 실행합니다. 완전 종료는 앱 메뉴를 사용하세요.")

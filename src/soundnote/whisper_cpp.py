@@ -17,7 +17,7 @@ from types import SimpleNamespace
 import urllib.request
 import wave
 
-from .paths import child_process_options, native_directory
+from .paths import native_directory
 
 
 class WhisperError(Exception):
@@ -34,7 +34,7 @@ class WhisperEngine:
 
     @staticmethod
     def executable(name):
-        filename = name + (".exe" if os.name == "nt" else "")
+        filename = name
         native = native_directory()
         if (native / filename).is_file():
             return str(native / filename)
@@ -94,7 +94,7 @@ class WhisperEngine:
         if backends.is_dir():
             environment["GGML_BACKEND_PATH"] = str(backends)
         process = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-                                   stderr=subprocess.STDOUT, env=environment, **child_process_options())
+                                   stderr=subprocess.STDOUT, env=environment)
         chunks = queue.Queue(maxsize=64)
         finished = threading.Event()
 
@@ -107,8 +107,7 @@ class WhisperEngine:
                     pass
 
         def read_output():
-            # Windows selectors cannot monitor subprocess pipes. A reader thread
-            # lets cancellation stay responsive on both platforms.
+            # Read output independently so cancellation stays responsive during inference.
             try:
                 while not finished.is_set():
                     chunk = os.read(process.stdout.fileno(), 65536)
@@ -169,7 +168,7 @@ class WhisperEngine:
     def transcribe(self, audio_path, model, language, options):
         cli, ffmpeg = self.executable("whisper-cli"), self.executable("ffmpeg")
         if not cli or not ffmpeg:
-            raise WhisperError("whisper.cpp와 FFmpeg가 필요합니다. 맥설치.command 또는 윈도우설치.bat를 실행한 뒤 재시도해 주세요.")
+            raise WhisperError("whisper.cpp와 FFmpeg가 필요합니다. README.md의 설치 명령을 실행한 뒤 재시도해 주세요.")
         model_path = self.model_file(self.MODELS[model])
         vad_path = self.model_file("silero-v5.1.2", vad=True) if options["vad_filter"] else None
         # Preparation is eager so the worker receives the full audio duration.

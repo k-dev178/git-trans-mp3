@@ -122,7 +122,7 @@ Path(sys.argv[sys.argv.index('--output-file') + 1] + '.json').write_text({json.d
 
     def test_missing_native_dependencies_explains_installation(self):
         with patch.object(self.engine, "executable", return_value=None):
-            with self.assertRaisesRegex(WhisperError, "설치.command"):
+            with self.assertRaisesRegex(WhisperError, "README.md"):
                 self.engine.transcribe(self.source, "mid", "auto", self.options)
 
     def test_success_exit_without_result_is_failure(self):
