@@ -184,6 +184,28 @@ time.sleep(60)
         store.recover()
         self.assertEqual(store.get(job["id"])["status"], "queued")
 
+    def test_windows_console_flag_is_passed_to_native_process(self):
+        from types import SimpleNamespace
+        from soundnote import whisper_cpp
+        native_os = SimpleNamespace(name="nt", environ=__import__("os").environ, read=__import__("os").read)
+        popen = subprocess.Popen
+        calls = []
+
+        def launch(*args, **kwargs):
+            calls.append(kwargs.pop("creationflags"))
+            return popen(*args, **kwargs)
+
+        with patch.object(whisper_cpp, "os", native_os), patch.object(
+                subprocess, "CREATE_NO_WINDOW", 0x08000000, create=True), patch.object(
+                subprocess, "Popen", side_effect=launch):
+            self.assertEqual(list(self.engine.run([sys.executable, "-c", "print('ready')"])), ["ready"])
+        self.assertEqual(calls, [0x08000000])
+
+    def test_windows_crlf_output_is_normalized(self):
+        lines = list(self.engine.run([sys.executable, "-c",
+                                     "import sys; sys.stdout.buffer.write(b'first\\r\\nsecond\\r\\n')"]))
+        self.assertEqual(lines, ["first", "second"])
+
     def test_nonzero_exit_is_not_silently_completed(self):
         with self.assertLogs(level="ERROR"), self.assertRaises(WhisperError):
             list(self.engine.run([sys.executable, "-c", "import sys; sys.exit(3)"]))

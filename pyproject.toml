@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "soundnote"
 version = "2.1.0"
-description = "Local desktop transcription with whisper.cpp"
+description = "Windows desktop transcription with whisper.cpp CPU"
 requires-python = ">=3.10,<3.14"
 dependencies = ["PySide6>=6.8,<7.0"]
 

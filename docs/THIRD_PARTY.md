@@ -12,6 +12,8 @@ never included by the build script.
 - GGML: https://github.com/ggml-org/ggml — MIT License.
 - FFmpeg: https://ffmpeg.org/ — LGPL/GPL, depending on build configuration.
 
-The build script preserves native tool license files supplied by Homebrew.
+The Windows build script preserves all notices from tools/native/licenses.
+Supply the notices for the exact whisper.cpp, GGML, FFmpeg and runtime DLL builds
+under the whisper.cpp and ffmpeg component directories before building.
 Check the licenses of the exact binaries before
 redistributing them; retain notices and meet applicable source requirements.

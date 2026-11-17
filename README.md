@@ -1,139 +1,98 @@
-# 소리노트
+# 소리노트 Windows
 
-음성 파일을 텍스트로 전사하는 **macOS 데스크톱 GUI 프로그램**입니다. Qt 화면과 C++ whisper.cpp 엔진을 사용합니다.
+음성 파일을 텍스트로 전사하는 Windows 10/11 x64 데스크톱 프로그램입니다. 한국어 Qt 화면과 whisper.cpp CPU 엔진을 사용합니다. API 키나 GPU는 필요하지 않습니다.
 
-## 설치
+## 배포본 실행
 
-소스에서 실행하려면 아래 프로그램이 필요합니다. 명령은 프로젝트 루트에서 실행하세요.
+`Soundnote-windows-x64.zip`을 폴더 전체에 압축 해제한 뒤 `Soundnote/Soundnote.exe`를 실행하세요. `_internal` 폴더도 함께 유지해야 합니다. Python·Qt·whisper.cpp·FFmpeg는 배포본에 포함됩니다.
 
-| 프로그램 | 용도 |
-| --- | --- |
-| [Homebrew](https://brew.sh/) | Python과 네이티브 도구 설치 |
-| Python 3.10~3.13 | 앱 실행. 아래 명령은 3.13 기준 |
-| PySide6 | Qt 데스크톱 화면. `requirements.txt`로 설치 |
-| whisper.cpp | C++ 음성 인식 엔진 (`whisper-cli`) |
-| FFmpeg | 입력 파일을 전사용 WAV로 변환 |
+첫 전사에서는 모델을 인터넷으로 다운로드합니다. 이후 같은 모델의 전사는 로컬에서 처리합니다. 설치 프로그램·자동 업데이트·코드 서명은 제공하지 않습니다.
 
-Homebrew가 없다면 [공식 설치 명령](https://brew.sh/)을 실행하고, 완료 후 표시되는 PATH 설정 안내를 따르세요.
+1. **+**를 누르고 MP3·M4A 등 파일을 선택하거나 끌어다 놓습니다.
+2. 모델·언어·설정을 고르고 **확인 · 전사 시작**을 누릅니다.
+3. 완료한 기록을 열어 복사하거나 TXT·SRT로 저장합니다. 실패한 작업은 재시도할 수 있습니다.
 
-```sh
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+## 개발 환경 설치
+
+Windows x64용 Python 3.10~3.13을 설치하세요. 다음 명령은 프로젝트 루트의 PowerShell에서 실행합니다.
+
+```powershell
+py -3.13 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -e .
+.\.venv\Scripts\python.exe -m soundnote
 ```
 
-필수 도구와 Python 패키지를 설치합니다.
+개발 실행에도 Windows x64용 `whisper-cli.exe`와 `ffmpeg.exe`가 필요합니다. `tools/native/`에 필요한 DLL과 함께 두거나 PATH에 등록하세요. 배포 빌드는 반드시 `tools/native/`의 도구를 사용합니다.
 
-```sh
-brew install python@3.13 whisper.cpp ffmpeg
-python3.13 -m venv .venv
-.venv/bin/python -m pip install -r requirements.txt
+로그를 보며 실행하려면 `--foreground`, 종료하려면 `--stop`을 사용합니다.
+
+```powershell
+.\.venv\Scripts\python.exe -m soundnote --foreground
+.\.venv\Scripts\python.exe -m soundnote --stop
 ```
 
-설치와 첫 모델 다운로드에는 인터넷 연결이 필요합니다. 전사 모델은 앱에서 처음 사용할 때 자동 다운로드되며, API 키는 필요하지 않습니다.
+## Windows 배포본 빌드
 
-## 실행
-
-```sh
-PYTHONPATH=src .venv/bin/python -m soundnote
-```
-
-앱은 터미널과 독립적으로 실행됩니다. 터미널에서 로그를 보며 실행하려면 `--foreground`를 붙입니다.
-
-```sh
-PYTHONPATH=src .venv/bin/python -m soundnote --foreground
-```
-
-1. 첫 화면의 **+**를 누르고 MP3·M4A 등 파일을 끌어다 놓거나 선택합니다. **Esc**로 목록에 돌아갈 수 있습니다.
-2. 모델·언어·세부 설정을 고르고 **확인 · 전사 시작**을 누릅니다. 목록에서 진행률을 확인할 수 있습니다.
-3. 완료된 기록을 클릭해 내용을 확인하고 복사하거나 TXT·SRT로 저장합니다. 실패한 작업은 같은 화면에서 다시 시작할 수 있습니다.
-
-## 배포 파일 생성
-
-설치를 마친 맥에서 빌드용 패키지를 설치한 뒤 빌드합니다.
-
-```sh
-.venv/bin/python -m pip install -r scripts/requirements-build.txt
-.venv/bin/python scripts/build.py
-```
-
-결과는 `dist/macos/Soundnote.app`과 `Soundnote-macos-<아키텍처>.zip`입니다. `.app` 또는 ZIP을 배포하세요. Python·Qt·whisper.cpp·FFmpeg가 포함되므로 배포본 사용자는 별도로 설치할 필요가 없습니다. 개인 `data/`와 전사 모델은 포함하지 않습니다.
-
-빌드 입력만 확인하려면 `.venv/bin/python scripts/build.py --plan`을 실행합니다. 빌드는 현재 Python과 네이티브 도구의 아키텍처를 따릅니다. Apple Silicon과 Intel 배포본은 해당 아키텍처의 맥에서 각각 생성하세요. Apple Developer 서명·공증·DMG 생성은 포함하지 않습니다.
-
-배포 전 다른 사용자 환경에서 앱 실행, 전사, TXT·SRT 저장, 창 재열기와 종료를 확인하세요. 구성요소의 라이선스는 [THIRD_PARTY.md](docs/THIRD_PARTY.md)를 참고하세요.
-
-## 폴더 구성
+Windows x64 환경과 x64 Python에서 빌드합니다. 네이티브 도구는 빌드 스크립트가 다운로드하지 않습니다. CPU용 whisper.cpp와 FFmpeg의 신뢰할 수 있는 Windows x64 빌드를 준비하세요.
 
 ```text
-src/soundnote/     GUI, 테마, 저장소, whisper.cpp 연동 코드
-scripts/          Python 빌드·테스트 도구
-assets/           앱 아이콘
-tests/            자동 테스트
-docs/             라이선스 안내, 화면 예시, 기존 참고 파일
-data/             기존 녹음 사본·전사 기록·모델 (개발 실행)
-build/, dist/     빌드 중간 파일, 배포 결과 (빌드 시 생성)
+tools/native/
+  whisper-cli.exe
+  ffmpeg.exe
+  *.dll
+  licenses/
+    whisper.cpp/  엔진·GGML 및 관련 구성요소의 라이선스
+    ffmpeg/       사용한 FFmpeg 빌드의 라이선스·배포 고지
 ```
 
-## 백그라운드 동작
+DLL은 하위 폴더 대신 실행 파일 옆에 두세요. 엔진 빌드에서 사용하는 whisper·GGML·OpenMP 등의 DLL과 FFmpeg DLL을 빠짐없이 포함해야 합니다. 정적 빌드는 별도 DLL이 필요하지 않을 수 있습니다. 배포하려는 PC의 CPU 명령어와 호환되는 엔진을 사용하세요. CUDA·Vulkan·Metal 전용 빌드는 사용하지 않습니다.
 
-- 앱 창의 닫기 버튼을 누르면 창이 숨겨지고 전사는 계속됩니다.
-- 맥 메뉴 막대의 소리노트 아이콘에서 **전사 목록 열기**, **새 전사**, **소리노트 종료**를 선택할 수 있습니다.
-- 실행 명령을 다시 실행하거나 배포본 앱을 더블클릭하면 실행 중인 앱 창을 다시 엽니다. Dock에서 앱을 활성화해도 숨겨진 창이 다시 열립니다.
-- 완전히 종료하려면 앱 메뉴의 **소리노트 종료** 또는 Cmd+Q를 사용합니다. 터미널에서도 종료할 수 있습니다.
-- 컴퓨터가 잠자기 상태이면 처리도 멈춥니다. 종료로 중단된 전사는 다음 실행 시 원본 음성부터 다시 처리됩니다.
-
-```sh
-PYTHONPATH=src .venv/bin/python -m soundnote --stop
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r scripts/requirements-build.txt
+.\.venv\Scripts\python.exe scripts/build.py --plan
+.\.venv\Scripts\python.exe scripts/build.py
 ```
 
-## 화면 모드
+빌드는 도구와 DLL의 PE x64 형식, 구성요소별 라이선스 파일 존재를 검사합니다. PyInstaller로 묶은 뒤 동봉 도구를 실행해 누락된 런타임 의존성을 확인합니다. `--plan`은 입력만 검사하며 다른 OS에서도 실행할 수 있습니다.
 
-앱 메뉴의 **설정…** 또는 **⌘,**를 누르면 설정창이 열립니다. 메뉴 막대의 소리노트 아이콘에서도 설정을 열 수 있습니다.
+결과는 `dist/windows/Soundnote/`와 `dist/windows/Soundnote-windows-x64.zip`입니다. 개인 녹음·DB·설정·모델 캐시는 포함하지 않습니다. 구성요소의 배포 조건은 [THIRD_PARTY.md](docs/THIRD_PARTY.md)를 참고하세요.
 
-- **시스템 설정 따르기 (기본값)**: 운영체제의 현재 화면 모드를 사용합니다. 실행 중 시스템 모드가 바뀌어도 함께 전환됩니다.
-- **화이트**: 밝은 화면으로 유지합니다.
-- **다크**: 어두운 화면으로 유지합니다.
+## 백그라운드 동작과 단축키
 
-선택은 즉시 모든 앱 화면에 적용되며 `data/settings.json`에 저장됩니다. 시스템 모드는 현재 색상으로 고정하지 않고 다음 실행에도 시스템 설정을 따릅니다.
+- 창을 닫으면 숨겨지고 전사는 계속됩니다. 시스템 트레이 아이콘으로 다시 열 수 있습니다.
+- 트레이 메뉴에서 **전사 목록 열기**, **새 전사**, **설정…**, **소리노트 종료**를 선택합니다.
+- 앱을 다시 실행하면 기존 창을 엽니다. 완전히 종료하려면 메뉴의 **소리노트 종료**를 사용합니다.
+- 새 전사: `Ctrl+N`, 설정: `Ctrl+,`, 종료: `Ctrl+Q`, 파일 추가 화면에서 돌아가기: `Esc`.
+- 컴퓨터가 절전 상태이면 처리도 멈춥니다. 종료로 중단된 작업은 다음 실행에서 처음부터 다시 처리됩니다.
 
-## 설정
+## 전사와 화면 설정
 
-| 설정 | 동작 |
-| --- | --- |
-| Low | Whisper base. 빠르고 가벼운 전사 |
-| Mid (기본값) | Whisper small. 속도와 정확도의 균형 |
-| High | Whisper medium. 더 큰 모델로 전사, 시간과 메모리 사용량 증가 |
-| 음성 언어 (기본값: 자동 감지) | 한국어·영어·일본어 등 음성 언어를 감지해 원래 언어로 전사. 파일 선택 후 작은 드롭다운에서 언어를 직접 지정할 수도 있음 |
-| 타임스탬프 표시 | 전사 내용을 시간별로 표시 |
-| 무음 구간 건너뛰기 | 말소리가 없는 구간을 제외하고 인식 |
-| 참고 단어 | 인명·전문 용어 등 인식에 참고할 단어 입력 (최대 1,000자) |
+Low는 Whisper base, Mid(기본값)는 small, High는 medium 모델입니다. 큰 모델일수록 메모리와 처리 시간이 더 필요합니다. 언어 자동 감지 또는 직접 지정, 타임스탬프 표시, 무음 구간 건너뛰기, 참고 단어(최대 1,000자)를 지원합니다.
 
-음성 인식은 Python 라이브러리 대신 [whisper.cpp](https://github.com/ggml-org/whisper.cpp)의 `whisper-cli` 프로세스가 수행합니다. Python은 GUI와 작업 관리를 담당합니다. Apple Silicon에서는 엔진의 기본 Metal 가속을 사용합니다. MP3·M4A 등 입력은 FFmpeg로 16kHz 모노 PCM WAV로 변환한 뒤 처리하며, 임시 WAV는 작업 종료 시 삭제합니다.
+FFmpeg로 입력을 16kHz 모노 PCM WAV로 변환한 뒤 전사하며 임시 WAV는 작업 종료 시 삭제합니다. 무음 건너뛰기는 별도의 Silero VAD 모델을 처음 한 번 다운로드합니다.
 
-처음 사용하는 GGML 모델은 한 번 다운로드됩니다. 무음 구간 건너뛰기를 사용하면 Silero VAD 모델도 다운로드합니다. 이후에는 로컬 모델을 사용하며 API 키는 필요하지 않습니다. 기존 faster-whisper 모델 캐시는 호환되지 않아 재사용하지 않으며, 기존 전사 기록은 계속 열 수 있습니다.
+설정에서 시스템 화면 모드(기본값)·화이트·다크를 선택할 수 있습니다. 선택은 즉시 적용되고 저장됩니다.
 
-## 저장과 진행률
+## 데이터 저장
 
-소스 실행은 기존 `data/` 저장 위치와 SQLite 형식을 유지합니다. 독립 배포본은 `~/Library/Application Support/Soundnote/`를 사용합니다. 아래 경로는 소스 실행 기준입니다.
+배포본은 `%LOCALAPPDATA%\Soundnote`, 소스 실행은 프로젝트의 `data/`를 사용합니다. ZIP을 교체하거나 앱 폴더를 옮겨도 배포본의 기록은 유지됩니다. `SOUNDNOTE_DATA_DIR` 환경변수 또는 `--data-dir`로 다른 저장 폴더를 지정할 수 있습니다.
 
-`SOUNDNOTE_DATA_DIR` 환경변수 또는 `--data-dir`로 저장 폴더를 지정할 수 있습니다. 기존 기록을 사용하려면 기존 `data/`의 절대 경로를 지정하세요. DB에는 음성 사본의 절대 경로가 저장되므로 폴더만 복사해 다른 위치로 옮기는 방식은 지원하지 않습니다.
+- `uploads/`: 원본을 보존한 음성 사본
+- `transcriptions.sqlite3`: 작업 상태와 결과
+- `models/whisper.cpp/`: GGML 전사 모델·VAD 모델
+- `settings.json`: 화면 설정
+- `app.log`, `launcher.log`: 오류·실행 로그
 
-- 음성 사본: `data/uploads/`
-- 작업 상태와 결과: `data/transcriptions.sqlite3`
-- C++ 엔진 모델: `data/models/whisper.cpp/` (`ggml-base.bin`, `ggml-small.bin`, `ggml-medium.bin`, `ggml-silero-v5.1.2.bin`)
-- 오류 로그: `data/app.log`, 실행 로그: `data/launcher.log`
+SQLite 형식은 기존 기록과 호환됩니다. 음성 사본의 경로는 DB에 절대 경로로 저장되므로 macOS 데이터를 Windows로 옮기는 이관 기능은 제공하지 않습니다. 기존 faster-whisper 모델 캐시는 재사용하지 않습니다.
 
-음성 파일 복사와 전사는 GUI 스레드 밖에서 처리됩니다. 작업은 추가한 순서대로 하나씩 전사되며, 나머지는 대기 상태로 표시됩니다. 모델 다운로드·분석 단계는 **모델 준비 중**으로 표시됩니다. 전사 진행률은 처리한 음성 구간의 끝 시간 ÷ 전체 음성 길이를 기준으로 계산하며, 최종 완료 시 100%가 됩니다.
-
-기록을 삭제하면 앱 내부 음성 사본과 결과가 삭제됩니다. 원래 파일은 수정하거나 삭제하지 않습니다. 파일당 최대 2GB를 지원합니다.
+파일 복사와 전사는 GUI 스레드 밖에서 수행합니다. 작업은 추가 순서대로 하나씩 처리하며 파일당 최대 2GB를 지원합니다. 기록 삭제는 앱 내부 사본과 결과만 삭제하고 원본 음성은 수정하지 않습니다.
 
 ## 개발 및 테스트
 
-패키지 개발 환경은 `.venv/bin/python -m pip install -e .`로 설치할 수도 있습니다.
-
-```sh
-.venv/bin/python scripts/test.py
+```powershell
+.\.venv\Scripts\python.exe scripts/test.py
 ```
 
-GUI 테스트는 실제 Qt 위젯과 이벤트 루프를 사용합니다. 전사 작업 테스트는 제어 가능한 음성 구간 스트림으로 진행률·저장·복구를 검증합니다. C++ 엔진 연동 테스트는 가짜 CLI 프로세스로 옵션 전달, 결과 파싱, 취소와 오류 처리를 검증합니다. 실제 모델의 음성 인식 정확도와 Metal 가속은 별도 실행으로 확인해야 합니다.
+`src/soundnote/`에 GUI·저장소·엔진·실행 코드가 있고, `scripts/`에 빌드·테스트 도구, `tests/`에 unittest 테스트가 있습니다. GUI 테스트는 Qt 위젯을 사용하며 엔진 테스트는 가짜 CLI로 옵션·진행률·취소·결과 파싱을 확인합니다.
 
-실제 엔진 확인은 `whisper-cli --help`와 `ffmpeg -version`을 실행한 뒤 앱에서 짧은 음성을 전사하고 진행률, 자동 언어 감지, TXT·SRT 저장을 확인하세요. 모델 다운로드와 임시 WAV 변환에 필요한 디스크 여유 공간을 확보하세요.
+배포 전 Python과 개발 도구가 없는 Windows 10/11 x64 PC에서 압축 해제·실행, 한글과 공백 경로, 첫 모델 다운로드, 실제 전사, TXT·SRT 저장, 트레이 복원, 중복 실행, 종료 및 중단 작업 복구를 확인하세요. 인식 정확도와 실제 Windows EXE 동작은 별도 검증이 필요합니다.

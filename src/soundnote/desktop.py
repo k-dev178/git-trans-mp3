@@ -519,7 +519,7 @@ class StartedPage(QWidget):
         self.error = label("", "error", True)
         self.error.hide()
         layout.addWidget(self.error)
-        copy = label("백그라운드에서 전사가 진행됩니다.\n다른 프로그램을 사용하거나 이 창을 닫아도 작업은 계속됩니다.\n메뉴 막대에서 다시 열 수 있어요.", "subtitle", True)
+        copy = label("백그라운드에서 전사가 진행됩니다.\n다른 프로그램을 사용하거나 이 창을 닫아도 작업은 계속됩니다.\n시스템 트레이에서 다시 열 수 있어요.", "subtitle", True)
         copy.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(copy)
         notice = label("앱을 완전히 종료하거나 컴퓨터를 잠자기 상태로 두면 작업이 중단됩니다.", "muted", True)
@@ -726,17 +726,17 @@ class MainWindow(QMainWindow):
         open_action.triggered.connect(self.restore)
         menu.addAction(open_action)
         new_action = QAction("새 전사", self)
-        new_action.setShortcut(QKeySequence.StandardKey.New)
+        new_action.setShortcut(QKeySequence("Ctrl+N"))
         new_action.triggered.connect(self.show_add)
         menu.addAction(new_action)
         self.settings_action = QAction("설정…", self)
         self.settings_action.setMenuRole(QAction.MenuRole.PreferencesRole)
-        self.settings_action.setShortcut(QKeySequence.StandardKey.Preferences)
+        self.settings_action.setShortcut(QKeySequence("Ctrl+,"))
         self.settings_action.triggered.connect(self.show_settings)
         menu.addAction(self.settings_action)
         quit_action = QAction("소리노트 종료", self)
         quit_action.setMenuRole(QAction.MenuRole.QuitRole)
-        quit_action.setShortcut(QKeySequence.StandardKey.Quit)
+        quit_action.setShortcut(QKeySequence("Ctrl+Q"))
         quit_action.triggered.connect(self.quit_application)
         menu.addAction(quit_action)
         self.tray = None
@@ -925,7 +925,7 @@ class MainWindow(QMainWindow):
             self.settings_dialog.hide()
         self.hide()
         if self.tray:
-            self.tray.showMessage("소리노트", "창을 닫아도 전사는 계속됩니다. 메뉴 막대에서 다시 열거나 종료할 수 있습니다.")
+            self.tray.showMessage("소리노트", "창을 닫아도 전사는 계속됩니다. 시스템 트레이에서 다시 열거나 종료할 수 있습니다.")
 
     def quit_application(self):
         self.quitting = True
@@ -965,7 +965,7 @@ def main():
     application = DesktopApplication(sys.argv[:1])
     application.setApplicationName("소리노트")
     application.setOrganizationName("Soundnote")
-    application.setFont(QFont("Apple SD Gothic Neo", 13))
+    application.setFont(QFont("Malgun Gothic", 10))
     application.setStyle("Fusion")
     application.setWindowIcon(app_icon())
     application.setQuitOnLastWindowClosed(False)

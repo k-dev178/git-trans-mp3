@@ -2,26 +2,22 @@
 
 ## Project Structure & Module Organization
 
-Soundnote (소리노트) is a macOS desktop transcription app using PySide6 and faster-whisper. Python modules live at the repository root:
-
-- `app.py`: application entry point; `launcher.py`: detached launch, single-instance handling, and shutdown.
-- `desktop.py`: Qt windows and interaction; `appearance.py`: themes and saved appearance preferences.
-- `transcription.py`: SQLite storage, file imports, transcription engine, worker queue, and exports.
-- `qt_bootstrap.py` and `migrate_legacy.py`: runtime discovery and legacy-process handling.
-
-`tests/` contains automated tests; `preview/` contains GUI screenshots. `소리노트.app/` is a launcher bundle that must remain inside the project directory. `data/` holds runtime files, uploaded audio, results, and downloaded models.
+Soundnote (소리노트) is a Windows 10/11 x64 desktop transcription app using PySide6 and the whisper.cpp CPU CLI. Application modules live in `src/soundnote/`: `desktop.py` handles Qt UI, `appearance.py` themes, `transcription.py` storage and worker queues, `whisper_cpp.py` engine processes, and `launcher.py`, `instance.py`, `paths.py` startup and runtime files. `scripts/` contains build and test tools, `tests/` automated tests, and `docs/` documentation.
 
 ## Build, Test, and Development Commands
 
-Use Python 3.10–3.13. From the repository root:
+Use Windows x64 Python 3.10–3.13. From PowerShell at the repository root:
 
-```sh
-python3.13 -m venv .venv
-.venv/bin/python -m pip install -r requirements.txt
-.venv/bin/python app.py
+```powershell
+py -3.13 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -e .
+.\.venv\Scripts\python.exe -m soundnote
+.\.venv\Scripts\python.exe scripts/test.py
+.\.venv\Scripts\python.exe -m pip install -r scripts/requirements-build.txt
+.\.venv\Scripts\python.exe scripts/build.py
 ```
 
-These commands create the environment, install dependencies, and launch the GUI. Use `.venv/bin/python launcher.py` for detached execution and `.venv/bin/python launcher.py --stop` to stop it. The macOS `설치.command`, `실행.command`, and `종료.command` scripts provide installation, launch, and shutdown shortcuts. No separate build step is configured.
+Use `--foreground` for attached execution and `--stop` to stop the app. Builds require CPU-only x64 `whisper-cli.exe`, `ffmpeg.exe`, required DLLs and license files in `tools/native/`; see README.md. Distribute `dist/windows/Soundnote-windows-x64.zip`. Frozen apps store data under `%LOCALAPPDATA%\Soundnote`; source checkouts use `data/`.
 
 ## Coding Style & Naming Conventions
 
@@ -32,7 +28,7 @@ Use four-space indentation, `snake_case` for functions and variables, `PascalCas
 Run the suite with:
 
 ```sh
-QT_QPA_PLATFORM=offscreen .venv/bin/python -m unittest discover -s tests -v
+.\.venv\Scripts\python.exe scripts/test.py
 ```
 
 Use `tests/test_<module>.py` and descriptive `test_<behavior>` methods. Tests use standard-library `unittest`, temporary storage, mocked transcription streams, and real Qt widgets. Install PySide6 to avoid skipped GUI tests. Cover relevant persistence, progress, recovery, and UI behavior; no numeric coverage threshold is configured. Recognition accuracy requires separate manual verification.

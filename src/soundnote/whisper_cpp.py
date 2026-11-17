@@ -34,7 +34,7 @@ class WhisperEngine:
 
     @staticmethod
     def executable(name):
-        filename = name
+        filename = name + ".exe" if os.name == "nt" and not name.endswith(".exe") else name
         native = native_directory()
         if (native / filename).is_file():
             return str(native / filename)
@@ -42,9 +42,7 @@ class WhisperEngine:
             match = next(native.rglob(filename), None)
             if match is not None:
                 return str(match)
-        # Finder launches do not necessarily inherit the user's shell PATH.
-        search = os.pathsep.join([os.environ.get("PATH", ""), "/opt/homebrew/bin", "/usr/local/bin"])
-        return shutil.which(name, path=search)
+        return shutil.which(filename)
 
     @classmethod
     def available(cls):
@@ -93,8 +91,11 @@ class WhisperEngine:
         backends = native_directory() / "ggml"
         if backends.is_dir():
             environment["GGML_BACKEND_PATH"] = str(backends)
+        elif native_directory().is_dir():
+            environment["GGML_BACKEND_PATH"] = str(native_directory())
         process = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-                                   stderr=subprocess.STDOUT, env=environment)
+                                   stderr=subprocess.STDOUT, env=environment,
+                                   **({"creationflags": subprocess.CREATE_NO_WINDOW} if os.name == "nt" else {}))
         chunks = queue.Queue(maxsize=64)
         finished = threading.Event()
 
@@ -136,6 +137,7 @@ class WhisperEngine:
                 pending += decoder.decode(chunk, final=eof)
                 while "\n" in pending:
                     line, pending = pending.split("\n", 1)
+                    line = line.rstrip("\r")
                     recent.append(line)
                     yield line
             if pending:

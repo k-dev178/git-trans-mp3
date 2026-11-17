@@ -14,7 +14,7 @@ def data_directory():
         return Path(override).expanduser().resolve()
     if not FROZEN:
         return ROOT / "data"
-    return Path.home() / "Library/Application Support/Soundnote"
+    return Path(os.environ.get("LOCALAPPDATA") or Path.home() / "AppData/Local") / "Soundnote"
 
 
 def native_directory():
