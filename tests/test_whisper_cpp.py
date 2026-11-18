@@ -48,8 +48,9 @@ Path(sys.argv[sys.argv.index("--output-file") + 1] + ".json").write_text(json.du
         self.models = patch.object(self.engine, "model_file", side_effect=lambda name, **kwargs:
                                   self.root / f"ggml-{name}.bin").start()
         native_run = self.engine.run
-        patch.object(self.engine, "run", side_effect=lambda command: native_run(
-            [sys.executable, *command] if command[0] in {str(self.cli), str(self.ffmpeg)} else command)).start()
+        patch.object(self.engine, "run", side_effect=lambda command, **kwargs: native_run(
+            [sys.executable, *command] if command[0] in {str(self.cli), str(self.ffmpeg)} else command,
+            **kwargs)).start()
 
     def executable(self, name, source):
         target = self.root / (name + ".py")
@@ -83,6 +84,23 @@ Path(sys.argv[sys.argv.index("--output-file") + 1] + ".json").write_text(json.du
                          ("completed", 100, "ko"))
         self.assertEqual(result["text"], "첫 문장\n다음 문장")
         self.assertEqual(result["segments"][-1]["end"], 10)
+
+    def test_decode_errors_do_not_complete_partial_audio(self):
+        store = Store(self.root / "jobs")
+        converter = self.ffmpeg.read_text(encoding="utf-8")
+        for exit_code in (0, 1):
+            with self.subTest(exit_code=exit_code):
+                self.ffmpeg.write_text(
+                    converter + '\nprint("Invalid data found when processing input", file=sys.stderr)\n'
+                    + f"sys.exit({exit_code})\n", encoding="utf-8")
+                job = store.add_file(self.source)
+                with self.assertLogs(level="ERROR"):
+                    Worker(store, self.engine).process(job["id"])
+                result = store.get(job["id"])
+                self.assertEqual(result["status"], "failed")
+                self.assertIn("파일의 음성을 온전히 읽지 못했습니다", result["error"])
+                self.assertFalse(self.arguments.exists())
+                self.assertEqual(self.source.read_bytes(), b"original audio")
 
     def test_vad_and_prompt_can_be_disabled(self):
         options = {**self.options, "vad_filter": False, "initial_prompt": ""}

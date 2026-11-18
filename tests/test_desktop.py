@@ -121,7 +121,7 @@ class DesktopTests(unittest.TestCase):
         self.assertTrue(self.window.add_page.confirm.isEnabled())
         self.assertTrue(self.window.add_page.options.isVisible())
         self.assertTrue(self.window.add_page.confirm.isVisible())
-        self.assertEqual(self.window.add_page.path,str(self.source))
+        self.assertEqual(Path(self.window.add_page.path), self.source)
         self.assertEqual(self.store.list(), [])
         self.window.show_home()
         self.window.library.new_button.click()
@@ -213,14 +213,22 @@ class DesktopTests(unittest.TestCase):
         return self.store.get(job["id"])
 
     def test_list_shows_all_records_and_returns_from_detail(self):
+        self.assertTrue(self.window.library.empty_state.isVisible())
         done = self.completed_job()
         queued = self.store.add_file(self.source)
         self.window.refresh()
         table = self.window.library.table
         self.assertEqual(table.rowCount(),2)
+        self.assertTrue(self.window.library.empty_state.isHidden())
         ids = {table.item(row,0).data(Qt.ItemDataRole.UserRole) for row in range(table.rowCount())}
         self.assertEqual(ids,{done["id"],queued["id"]})
-        self.window.show_detail(done["id"])
+        done_row = next(row for row in range(table.rowCount())
+                        if table.item(row, 0).data(Qt.ItemDataRole.UserRole) == done["id"])
+        self.assertEqual(table.item(done_row, 2).text(), "00:03")
+        point = table.visualItemRect(table.item(done_row, 3)).center()
+        QTest.mouseClick(table.viewport(), Qt.MouseButton.LeftButton, pos=point)
+        self.assertIs(self.window.stack.currentWidget(), self.window.detail)
+        self.assertEqual(self.window.detail.job["id"], done["id"])
         self.window.detail.home_requested.emit()
         self.assertIs(self.window.stack.currentWidget(),self.window.library)
         self.assertEqual(table.rowCount(),2)
@@ -284,7 +292,7 @@ class DesktopTests(unittest.TestCase):
         destination = Path(self.temp.name)/"result.srt"
         with patch("soundnote.desktop.QFileDialog.getSaveFileName",return_value=(str(destination),"")):
             self.window.detail.srt_button.click()
-        self.assertIn("00:00:00,000 --> 00:00:03,000",destination.read_text())
+        self.assertIn("00:00:00,000 --> 00:00:03,000", destination.read_text(encoding="utf-8"))
         other = self.completed_job("다른 기록.m4a")
         self.window.show_detail(other["id"])
         self.assertEqual(self.window.detail.copy_button.text(), "복사")
@@ -292,10 +300,24 @@ class DesktopTests(unittest.TestCase):
     def test_failed_job_retry_and_delete(self):
         job = self.store.add_file(self.source)
         self.store.update(job["id"],status="failed",error="전사 실패")
-        self.window.show_detail(job["id"])
+        self.window.started_id = job["id"]
+        started = self.window.started_page
+        self.window.stack.setCurrentWidget(started)
+        self.window.refresh()
+        self.assertTrue(started.error.isVisible())
+        self.assertTrue(started.background_help.isHidden())
+        started.new_button.click()
+        self.assertIs(self.window.stack.currentWidget(), self.window.add_page)
+        self.window.stack.setCurrentWidget(started)
+        started.detail_button.click()
+        self.assertIs(self.window.stack.currentWidget(), self.window.detail)
+        self.assertEqual(self.window.detail.error.message.text(), "전사 실패")
+        self.assertTrue(self.window.detail.transcript.isHidden())
         self.assertFalse(self.window.detail.retry_button.isHidden())
         self.window.detail.retry_button.click()
         self.assertEqual(self.store.get(job["id"])["status"],"queued")
+        self.assertTrue(self.window.detail.error.isHidden())
+        self.assertFalse(self.window.detail.transcript.isHidden())
         self.store.update(job["id"],status="failed")
         self.window.refresh()
         with patch("soundnote.desktop.QMessageBox.question",return_value=QMessageBox.StandardButton.Yes):

@@ -83,7 +83,7 @@ class WhisperEngine:
             if partial is not None:
                 partial.unlink(missing_ok=True)
 
-    def run(self, command):
+    def run(self, command, *, failure_message="whisper.cpp 전사에 실패했습니다. data/app.log를 확인해 주세요."):
         """Drain both output streams and stop children even during silent inference."""
         self.check_stopping()
         environment = os.environ.copy()
@@ -149,7 +149,7 @@ class WhisperEngine:
             if process.returncode:
                 logging.error("%s exited with %s: %s", Path(command[0]).name,
                               process.returncode, "\n".join(recent))
-                raise WhisperError("음성 변환 또는 whisper.cpp 전사에 실패했습니다. data/app.log를 확인해 주세요.")
+                raise WhisperError(failure_message)
         finally:
             finished.set()
             if process.poll() is None:
@@ -177,10 +177,20 @@ class WhisperEngine:
         temporary = tempfile.TemporaryDirectory(prefix="soundnote-")
         try:
             wav_path = Path(temporary.name) / "audio.wav"
-            for _ in self.run([ffmpeg, "-nostdin", "-hide_banner", "-loglevel", "error", "-y",
-                               "-i", str(Path(audio_path).resolve()), "-vn", "-ar", "16000",
-                               "-ac", "1", "-c:a", "pcm_s16le", str(wav_path)]):
-                pass
+            conversion_failure = (
+                "파일의 음성을 온전히 읽지 못했습니다. 원본이 끝까지 재생되는지 확인하고 "
+                "정상 파일을 다시 추가해 주세요."
+            )
+            conversion_errors = deque(maxlen=12)
+            command = [ffmpeg, "-nostdin", "-hide_banner", "-loglevel", "error", "-xerror", "-y",
+                       "-i", str(Path(audio_path).resolve()), "-vn", "-ar", "16000",
+                       "-ac", "1", "-c:a", "pcm_s16le", str(wav_path)]
+            for line in self.run(command, failure_message=conversion_failure):
+                if line.strip():
+                    conversion_errors.append(line)
+            if conversion_errors:
+                logging.error("Audio conversion errors: %s", "\n".join(conversion_errors))
+                raise WhisperError(conversion_failure)
             with wave.open(str(wav_path), "rb") as audio:
                 duration = audio.getnframes() / audio.getframerate()
             output = Path(temporary.name) / "result"

@@ -13,11 +13,13 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 NATIVE = ROOT / "tools/native"
+WINDOWS_ICON = ROOT / "assets/windows/Soundnote.ico"
 
 
 def build_command(executables, extra_binaries=(), extra_data=()):
     command = [sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean",
-               "--windowed", "--onedir", "--name", "Soundnote", "--paths", str(ROOT / "src"),
+               "--windowed", "--onedir", "--name", "Soundnote", "--icon", str(WINDOWS_ICON),
+               "--paths", str(ROOT / "src"),
                "--distpath", str(ROOT / "dist/windows"),
                "--workpath", str(ROOT / "build/windows"), "--specpath", str(ROOT / "build")]
     for executable in executables:

@@ -45,6 +45,8 @@ class DistributionInputTests(unittest.TestCase):
         command = builder.build_command(["/test/whisper-cli.exe", "/test/ffmpeg.exe"])
         self.assertEqual(command.count("--add-binary"), 2)
         self.assertIn("--windowed", command)
+        icon = Path(command[command.index("--icon") + 1])
+        self.assertTrue(icon.is_file())
         self.assertFalse(any(str(ROOT / "data") in argument for argument in command))
         self.assertIn(str(ROOT / "scripts/app_entry.py"), command)
         self.assertIn(str(ROOT / "dist/windows"), command)

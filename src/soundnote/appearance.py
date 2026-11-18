@@ -55,6 +55,13 @@ QLabel#job-status[failed="true"] { color: $error; }
 QLabel#error { color: $error; background: $error_bg; border-radius: 6px; padding: 11px; }
 QLabel#notice { color: $notice; background: $notice_bg; border: 1px solid $notice_border; border-radius: 7px; padding: 12px; }
 QLabel#hero-title { font-size: 24px; font-weight: 600; }
+QFrame#library-empty { border: 1px dashed $border; border-radius: 10px; }
+QFrame#job-card { background: $surface; border: 1px solid $border; border-radius: 12px; }
+QFrame#job-error { background: $error_bg; border-radius: 8px; }
+QLabel#job-error-title { color: $error; font-weight: 600; }
+QLabel#job-error-message { color: $text; }
+QLabel#outcome-icon { background: $hover; border-radius: 10px; font-size: 21px; font-weight: 600; }
+QLabel#outcome-icon[failed="true"] { background: $error_bg; color: $error; }
 QPushButton { background: $surface; border: 1px solid $border; border-radius: 7px; padding: 10px 16px; }
 QPushButton:hover { background: $hover; border-color: $focus; }
 QPushButton:pressed { background: $pressed; }
@@ -87,6 +94,7 @@ QTableWidget::item:selected { background: $selection; }
 QTableWidget#job-list::item { border-bottom: 1px solid $border; }
 QTableWidget#job-list::item:hover { background: $hover; }
 QTableWidget#job-list::item:selected { background: $selection; color: $selected_text; }
+QTableWidget#job-list QHeaderView::section { font-size: 12px; padding: 10px 11px; }
 QPlainTextEdit#transcript { font-size: 14px; padding: 14px; border-radius: 8px; }
 QLabel#job-status[state="queued"], QLabel#job-status[state="preparing"] { color: $muted; }
 QHeaderView::section { background: $header; border: 0; border-bottom: 1px solid $border; padding: 13px; color: $muted; font-size: 11px; }

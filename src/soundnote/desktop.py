@@ -414,27 +414,29 @@ class LibraryPage(QWidget):
         self.jobs = []
         self.signature = None
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(16, 12, 16, 16)
-        layout.setSpacing(10)
+        layout.setContentsMargins(28, 24, 28, 24)
+        layout.setSpacing(18)
         toolbar = QHBoxLayout()
-        toolbar.addStretch()
-        self.new_button = button("+", self.new_requested.emit, primary=True)
-        self.new_button.setFixedSize(36, 36)
+        toolbar.addWidget(label("전사 목록", "hero-title"), 1)
+        self.new_button = button("+  새 전사", self.new_requested.emit, primary=True)
         self.new_button.setAccessibleName("새 전사")
-        self.new_button.setToolTip("새 전사")
-        self.new_button.setStyleSheet("padding: 0; border-radius: 18px; font-size: 23px; font-weight: 400;")
+        self.new_button.setToolTip("새 전사 (Ctrl+N)")
         toolbar.addWidget(self.new_button)
         layout.addLayout(toolbar)
-        self.table = QTableWidget(0, 2)
+        self.table = QTableWidget(0, 4)
         self.table.setObjectName("job-list")
+        self.table.setHorizontalHeaderLabels(["파일 이름", "상태", "길이", ""])
         self.table.setTextElideMode(Qt.TextElideMode.ElideMiddle)
         self.table.setMouseTracking(True)
         self.table.setWordWrap(False)
         self.table.setAccessibleName("전사 목록")
         self.table.verticalHeader().hide()
-        self.table.horizontalHeader().hide()
-        self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        self.table.setColumnWidth(1, 185)
+        header = self.table.horizontalHeader()
+        header.setDefaultAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        for column, width in [(1, 174), (2, 84), (3, 42)]:
+            header.setSectionResizeMode(column, QHeaderView.ResizeMode.Fixed)
+            self.table.setColumnWidth(column, width)
         self.table.setShowGrid(False)
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -442,6 +444,8 @@ class LibraryPage(QWidget):
         self.table.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.table.cellClicked.connect(self.open_row)
         self.table.itemActivated.connect(lambda item: self.open_row(item.row(), item.column()))
+        self.table.cellEntered.connect(lambda *_: self.table.viewport().setCursor(Qt.CursorShape.PointingHandCursor))
+        self.table.viewportEntered.connect(self.table.viewport().unsetCursor)
         self.context_menu = QMenu(self.table)
         self.context_menu.setMinimumWidth(144)
         self.delete_action = self.context_menu.addAction("삭제")
@@ -450,6 +454,17 @@ class LibraryPage(QWidget):
         self.table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.table.customContextMenuRequested.connect(self.show_context_menu)
         layout.addWidget(self.table, 1)
+        self.empty_state = QFrame()
+        self.empty_state.setObjectName("library-empty")
+        empty = QVBoxLayout(self.empty_state)
+        empty.setSpacing(8)
+        empty.addStretch()
+        empty.addWidget(WaveMark(44), alignment=Qt.AlignmentFlag.AlignHCenter)
+        empty.addWidget(label("아직 전사 기록이 없어요", "section-title"), alignment=Qt.AlignmentFlag.AlignHCenter)
+        empty.addWidget(label("새 전사를 눌러 음성이나 영상 파일을 추가하세요.", "subtitle", True),
+                        alignment=Qt.AlignmentFlag.AlignHCenter)
+        empty.addStretch()
+        layout.addWidget(self.empty_state, 1)
 
     def set_jobs(self, jobs):
         self.jobs = jobs
@@ -459,6 +474,8 @@ class LibraryPage(QWidget):
         # Preserve animated widgets and row selection during progress updates.
         jobs = self.jobs
         signature = tuple(job["id"] for job in jobs)
+        self.empty_state.setVisible(not jobs)
+        self.table.setVisible(bool(jobs))
         if signature != self.signature:
             selected = self.table.item(self.table.currentRow(), 0)
             selected_id = selected.data(Qt.ItemDataRole.UserRole) if selected else None
@@ -475,11 +492,20 @@ class LibraryPage(QWidget):
                 self.table.setItem(row, 0, name)
                 self.table.setItem(row, 1, QTableWidgetItem())
                 self.table.setCellWidget(row, 1, JobStatus(job))
+                self.table.setItem(row, 2, QTableWidgetItem())
+                detail = QTableWidgetItem("›")
+                detail.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                detail.setToolTip("전사 상세 보기")
+                detail.setData(Qt.ItemDataRole.AccessibleTextRole, "전사 상세 보기")
+                self.table.setItem(row, 3, detail)
                 if job["id"] == selected_id:
                     self.table.selectRow(row)
             self.signature = signature
         for row, job in enumerate(jobs):
             self.table.cellWidget(row, 1).update_job(job)
+            duration = clock_label(job["duration"]) if job["duration"] else "—"
+            if self.table.item(row, 2).text() != duration:
+                self.table.item(row, 2).setText(duration)
 
     def open_row(self, row, column):
         item = self.table.item(row, 0)
@@ -497,44 +523,125 @@ class LibraryPage(QWidget):
         self.context_menu.popup(self.table.viewport().mapToGlobal(position))
 
 
+class JobError(QFrame):
+    def __init__(self):
+        super().__init__()
+        self.setObjectName("job-error")
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(14, 12, 14, 12)
+        layout.setSpacing(5)
+        layout.addWidget(label("실패 원인", "job-error-title"))
+        self.message = label("", "job-error-message", True)
+        self.message.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        layout.addWidget(self.message)
+        self.hide()
+
+    def set_job(self, job):
+        failed = job["status"] == "failed"
+        if failed:
+            self.message.setText(job.get("error") or "이 파일을 처리하지 못했습니다. 파일을 확인한 뒤 다시 시도해 주세요.")
+        self.setVisible(failed)
+
+
 class StartedPage(QWidget):
     home_requested = Signal()
+    detail_requested = Signal(str)
+    new_requested = Signal()
 
     def __init__(self):
         super().__init__()
+        self.job_id = None
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(60, 45, 60, 45)
-        layout.setSpacing(20)
-        layout.addStretch()
-        layout.addWidget(WaveMark(80), alignment=Qt.AlignmentFlag.AlignHCenter)
-        self.title = label("전사를 시작했어요.", "hero-title")
-        self.title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.title)
+        layout.setContentsMargins(28, 24, 28, 24)
+        layout.setSpacing(16)
+        back = button("←  전사 목록으로", self.home_requested.emit)
+        back.setProperty("compact", True)
+        layout.addWidget(back, alignment=Qt.AlignmentFlag.AlignLeft)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        layout.addWidget(scroll, 1)
+        body = QWidget()
+        scroll.setWidget(body)
+        body_layout = QVBoxLayout(body)
+        body_layout.setContentsMargins(0, 8, 0, 8)
+        body_layout.addStretch(1)
+        row = QHBoxLayout()
+        row.addStretch(1)
+        body_layout.addLayout(row)
+        body_layout.addStretch(2)
+
+        card = QFrame()
+        card.setObjectName("job-card")
+        card.setMaximumWidth(560)
+        row.addWidget(card, 8)
+        row.addStretch(1)
+        content = QVBoxLayout(card)
+        content.setContentsMargins(24, 24, 24, 24)
+        content.setSpacing(16)
+        header = QHBoxLayout()
+        header.setSpacing(14)
+        self.wave = WaveMark(44)
+        header.addWidget(self.wave, alignment=Qt.AlignmentFlag.AlignTop)
+        self.outcome_icon = label("", "outcome-icon")
+        self.outcome_icon.setFixedSize(44, 44)
+        self.outcome_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        header.addWidget(self.outcome_icon, alignment=Qt.AlignmentFlag.AlignTop)
+        text = QVBoxLayout()
+        text.setSpacing(5)
+        self.title = label("", "hero-title", True)
+        text.addWidget(self.title)
         self.filename = label("", "subtitle", True)
-        self.filename.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.filename)
-        self.status = JobStatus({"status":"importing", "progress":0})
-        self.status.setMaximumWidth(440)
-        layout.addWidget(self.status, alignment=Qt.AlignmentFlag.AlignHCenter)
-        self.error = label("", "error", True)
-        self.error.hide()
-        layout.addWidget(self.error)
-        copy = label("백그라운드에서 전사가 진행됩니다.\n다른 프로그램을 사용하거나 이 창을 닫아도 작업은 계속됩니다.\n시스템 트레이에서 다시 열 수 있어요.", "subtitle", True)
-        copy.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(copy)
-        notice = label("앱을 완전히 종료하거나 컴퓨터를 잠자기 상태로 두면 작업이 중단됩니다.", "muted", True)
-        notice.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(notice)
-        layout.addSpacing(10)
-        layout.addWidget(button("홈으로 돌아가기  →", self.home_requested.emit, primary=True), alignment=Qt.AlignmentFlag.AlignHCenter)
-        layout.addStretch()
+        text.addWidget(self.filename)
+        header.addLayout(text, 1)
+        content.addLayout(header)
+        self.status = JobStatus({"status": "importing", "progress": 0})
+        self.status.layout().setContentsMargins(0, 0, 0, 0)
+        content.addWidget(self.status)
+        self.error = JobError()
+        content.addWidget(self.error)
+        self.background_help = label("창을 닫아도 전사는 계속됩니다. 앱을 종료하거나 컴퓨터를 절전 모드로 전환하면 작업이 중단됩니다.", "muted", True)
+        content.addWidget(self.background_help)
+        actions = QHBoxLayout()
+        actions.setSpacing(8)
+        actions.addStretch()
+        self.new_button = button("다른 파일 추가", self.new_requested.emit)
+        actions.addWidget(self.new_button)
+        self.detail_button = button("전사 상세 보기", self.open_detail, primary=True)
+        actions.addWidget(self.detail_button)
+        content.addLayout(actions)
 
     def set_job(self, job):
+        state = job["status"]
+        failed = state == "failed"
+        completed = state == "completed"
+        ongoing = state in ACTIVE or state == "importing"
+        self.job_id = job["id"] if state != "importing" else None
         self.filename.setText(job["filename"])
+        self.title.setText({
+            "importing": "파일을 추가하고 있어요",
+            "completed": "전사가 완료됐어요",
+            "failed": "전사를 완료하지 못했어요",
+        }.get(state, "전사 진행 상황"))
+        self.wave.setVisible(ongoing)
+        self.outcome_icon.setText("!" if failed else "✓")
+        self.outcome_icon.setVisible(not ongoing)
+        if self.outcome_icon.property("failed") != failed:
+            self.outcome_icon.setProperty("failed", failed)
+            self.outcome_icon.style().unpolish(self.outcome_icon)
+            self.outcome_icon.style().polish(self.outcome_icon)
+        self.status.setVisible(ongoing)
         self.status.update_job(job)
-        self.title.setText("기록이 완성되었어요." if job["status"] == "completed" else "전사를 완료하지 못했어요." if job["status"] == "failed" else "전사를 시작했어요.")
-        self.error.setText(job.get("error") or "")
-        self.error.setVisible(job["status"] == "failed")
+        self.error.set_job(job)
+        self.background_help.setVisible(ongoing)
+        self.new_button.setVisible(failed)
+        self.detail_button.setVisible(self.job_id is not None)
+        self.detail_button.setText("전사 결과 보기" if completed else "전사 상세 보기")
+
+    def open_detail(self):
+        if self.job_id is not None:
+            self.detail_requested.emit(self.job_id)
 
 
 class DetailPage(QWidget):
@@ -547,23 +654,27 @@ class DetailPage(QWidget):
         self.job = None
         layout = QVBoxLayout(self)
         layout.setContentsMargins(32, 24, 32, 24)
-        layout.setSpacing(18)
+        layout.setSpacing(14)
         back = button("←  전사 목록으로", self.home_requested.emit)
         back.setProperty("compact", True)
         layout.addWidget(back, alignment=Qt.AlignmentFlag.AlignLeft)
-        layout.addWidget(label("TRANSCRIPTION", "eyebrow"))
         self.title = label("", "hero-title", True)
         self.meta = label("", "muted", True)
         layout.addWidget(self.title)
         layout.addWidget(self.meta)
-        self.status = JobStatus({"status":"queued", "progress":0})
+        self.status = JobStatus({"status": "queued", "progress": 0})
+        self.status.layout().setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.status)
-        self.error = label("", "error", True)
-        self.error.hide()
+        self.error = JobError()
         layout.addWidget(self.error)
+        self.transcript = QWidget()
+        transcript_layout = QVBoxLayout(self.transcript)
+        transcript_layout.setContentsMargins(0, 0, 0, 0)
+        transcript_layout.setSpacing(10)
         toolbar = QHBoxLayout()
         toolbar.setSpacing(8)
-        toolbar.addWidget(label("전사 내용", "section-title"), 1)
+        self.transcript_title = label("전사 내용", "section-title")
+        toolbar.addWidget(self.transcript_title, 1)
         self.copy_button = button("복사", self.copy_text)
         self.txt_button = button("TXT 저장", lambda: self.save("txt"))
         self.srt_button = button("SRT 저장", lambda: self.save("srt"))
@@ -577,25 +688,27 @@ class DetailPage(QWidget):
         self.copy_feedback.setSingleShot(True)
         self.copy_feedback.setInterval(1400)
         self.copy_feedback.timeout.connect(lambda: self.copy_button.setText("복사"))
-        layout.addLayout(toolbar)
+        transcript_layout.addLayout(toolbar)
         self.text = QPlainTextEdit()
         self.text.setObjectName("transcript")
         self.text.setAccessibleName("전사 내용")
         self.text.setReadOnly(True)
         self.text.setPlaceholderText("전사가 진행되면 인식된 내용이 여기에 표시됩니다.")
-        layout.addWidget(self.text, 1)
+        transcript_layout.addWidget(self.text, 1)
+        layout.addWidget(self.transcript, 1)
         footer = QHBoxLayout()
         self.delete_button = button("기록 삭제", lambda: self.delete_requested.emit(self.job["id"]))
         self.delete_button.setObjectName("danger")
         footer.addWidget(self.delete_button)
         footer.addStretch()
-        self.retry_button = button("다시 전사하기", lambda: self.retry_requested.emit(self.job["id"]))
+        self.retry_button = button("다시 전사하기", lambda: self.retry_requested.emit(self.job["id"]), primary=True)
         footer.addWidget(self.retry_button)
-        footer.addWidget(button("홈으로 돌아가기", self.home_requested.emit, primary=True))
         layout.addLayout(footer)
+        layout.addStretch()
 
     def set_job(self, job):
-        if self.job is None or self.job["id"] != job["id"]:
+        same_job = self.job is not None and self.job["id"] == job["id"]
+        if not same_job:
             self.copy_feedback.stop()
             self.copy_button.setText("복사")
         self.job = job
@@ -603,22 +716,24 @@ class DetailPage(QWidget):
         language = LANGUAGE_LABELS.get(job["detected_language"] or job["language"], job["detected_language"] or job["language"])
         self.meta.setText(f"{MODEL_LABELS[job['model']]} · {language} · {bytes_label(job['size'])}" + (f" · {clock_label(job['duration'])}" if job["duration"] else ""))
         self.status.update_job(job)
-        self.error.setText(job["error"] or "")
-        self.error.setVisible(job["status"] == "failed")
+        self.error.set_job(job)
         if job["options"]["timestamps"]:
             text = "\n\n".join(f"[{clock_label(s['start'])}]  {s['text']}" for s in job["segments"])
         else:
             text = job["text"]
-        if text != self.text.toPlainText():
-            scroll = self.text.verticalScrollBar().value()
+        if not same_job or text != self.text.toPlainText():
+            scroll = self.text.verticalScrollBar().value() if same_job else 0
             self.text.setPlainText(text)
             self.text.verticalScrollBar().setValue(scroll)
-        self.text.setPlaceholderText("인식된 말소리가 없습니다." if job["status"] == "completed" else "전사가 진행되면 인식된 내용이 여기에 표시됩니다.")
         completed = job["status"] == "completed"
+        failed = job["status"] == "failed"
+        self.transcript.setVisible(not failed or bool(text))
+        self.transcript_title.setText("부분 전사 내용" if failed else "전사 내용")
+        self.text.setPlaceholderText("인식된 말소리가 없습니다." if completed else "전사가 진행되면 인식된 내용이 여기에 표시됩니다.")
         for item in [self.copy_button, self.txt_button, self.srt_button]:
-            item.setEnabled(completed)
-        self.delete_button.setEnabled(job["status"] not in ACTIVE)
-        self.retry_button.setVisible(job["status"] == "failed")
+            item.setVisible(completed)
+        self.delete_button.setVisible(job["status"] not in ACTIVE)
+        self.retry_button.setVisible(failed)
 
     def copy_text(self):
         if self.job:
@@ -715,6 +830,8 @@ class MainWindow(QMainWindow):
         self.add_page.home_requested.connect(self.show_home)
         self.add_page.start_requested.connect(self.start_job)
         self.started_page.home_requested.connect(self.show_home)
+        self.started_page.detail_requested.connect(self.show_detail)
+        self.started_page.new_requested.connect(self.show_add)
         self.detail.home_requested.connect(self.show_home)
         self.detail.retry_requested.connect(self.retry)
         self.detail.delete_requested.connect(self.delete)
